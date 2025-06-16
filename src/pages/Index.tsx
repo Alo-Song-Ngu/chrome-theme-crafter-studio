@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,8 +75,13 @@ const Index = () => {
   }, []);
 
   const updateColor = useCallback((colorKey: keyof ThemeData['colors'], color: string) => {
-    updateThemeData({ colors: { [colorKey]: color } });
-  }, [updateThemeData]);
+    updateThemeData({ 
+      colors: { 
+        ...themeData.colors,
+        [colorKey]: color 
+      } 
+    });
+  }, [updateThemeData, themeData.colors]);
 
   const updateImage = useCallback((imageKey: keyof ThemeData['images'], file: File | undefined) => {
     updateThemeData({ images: { [imageKey]: file } });
