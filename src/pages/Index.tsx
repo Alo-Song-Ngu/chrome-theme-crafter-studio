@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,11 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { ChromePreview } from '@/components/ChromePreview';
 import { ColorPicker } from '@/components/ColorPicker';
-import { ImageUpload } from '@/components/ImageUpload';
 import { ThemeGenerator } from '@/components/ThemeGenerator';
 import { TintPicker } from '@/components/TintPicker';
+import { QuickStartWizard } from '@/components/QuickStartWizard';
+import { DragDropImageUpload } from '@/components/DragDropImageUpload';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
+import { LazyChromaPreview } from '@/components/LazyChromaPreview';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Palette, Image, Settings, Download, Lightbulb } from 'lucide-react';
+import { Palette, Image, Settings, Download, Lightbulb, Undo, Redo, Sparkles } from 'lucide-react';
 
 export interface ThemeData {
   name: string;
@@ -73,7 +76,9 @@ export interface ThemeData {
 }
 
 const Index = () => {
-  const [themeData, setThemeData] = useState<ThemeData>({
+  const [showWizard, setShowWizard] = useState(true);
+  
+  const initialThemeData: ThemeData = {
     name: 'My Chrome Theme',
     version: '1.0',
     description: 'A beautiful custom Chrome theme',
@@ -113,18 +118,28 @@ const Index = () => {
       ntp_background_repeat: 'no-repeat',
       ntp_logo_alternate: 0,
     },
-  });
+  };
+
+  const {
+    state: themeData,
+    set: setThemeData,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    reset: resetThemeData
+  } = useUndoRedo(initialThemeData);
 
   const updateThemeData = useCallback((updates: Partial<ThemeData>) => {
-    setThemeData(prev => ({
-      ...prev,
+    setThemeData({
+      ...themeData,
       ...updates,
-      colors: { ...prev.colors, ...updates.colors },
-      images: { ...prev.images, ...updates.images },
-      tints: { ...prev.tints, ...updates.tints },
-      properties: { ...prev.properties, ...updates.properties },
-    }));
-  }, []);
+      colors: { ...themeData.colors, ...updates.colors },
+      images: { ...themeData.images, ...updates.images },
+      tints: { ...themeData.tints, ...updates.tints },
+      properties: { ...themeData.properties, ...updates.properties },
+    });
+  }, [themeData, setThemeData]);
 
   const updateColor = useCallback((colorKey: keyof ThemeData['colors'], color: string) => {
     updateThemeData({ 
@@ -136,8 +151,8 @@ const Index = () => {
   }, [updateThemeData, themeData.colors]);
 
   const updateImage = useCallback((imageKey: keyof ThemeData['images'], file: File | undefined) => {
-    updateThemeData({ images: { [imageKey]: file } });
-  }, [updateThemeData]);
+    updateThemeData({ images: { ...themeData.images, [imageKey]: file } });
+  }, [updateThemeData, themeData.images]);
 
   const updateTint = useCallback((tintKey: keyof ThemeData['tints'], values: [number, number, number]) => {
     updateThemeData({ 
@@ -148,20 +163,89 @@ const Index = () => {
     });
   }, [updateThemeData, themeData.tints]);
 
+  const handleApplyTemplate = useCallback((template: Partial<ThemeData>) => {
+    setThemeData({
+      ...themeData,
+      ...template
+    });
+    toast({
+      title: 'Template đã được áp dụng!',
+      description: 'Bạn có thể tiếp tục tùy chỉnh từ template này.',
+    });
+  }, [themeData, setThemeData]);
+
+  // Image size recommendations for different elements
+  const imageSizeRecommendations: Record<keyof ThemeData['images'], string> = {
+    theme_button_background: '30x30',
+    theme_frame: '∞x128',
+    theme_frame_inactive: '∞x128',
+    theme_frame_incognito: '∞x128',
+    theme_frame_incognito_inactive: '∞x128',
+    theme_frame_overlay: '1100x64',
+    theme_frame_overlay_inactive: '1100x64',
+    theme_ntp_attribution: 'Any',
+    theme_ntp_background: '1920x1080',
+    theme_tab_background: '16x16',
+    theme_tab_background_incognito: '∞x128',
+    theme_tab_background_v: '∞x128',
+    theme_toolbar: '∞x128',
+    theme_window_control_background: '∞x128',
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Quick Start Wizard */}
+      <QuickStartWizard
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
+        onApplyTemplate={handleApplyTemplate}
+      />
+
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-white/20">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-center space-x-4">
-            <div className="w-12 h-12 bg-chrome-gradient rounded-xl flex items-center justify-center animate-chrome-glow">
-              <Palette className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-chrome-gradient rounded-xl flex items-center justify-center animate-chrome-glow">
+                <Palette className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-chrome-gradient bg-clip-text text-transparent">
+                  Chrome Theme Studio Pro
+                </h1>
+                <p className="text-gray-600">Tạo theme Chrome chuyên nghiệp với đầy đủ tính năng</p>
+              </div>
             </div>
-            <div className="text-center">
-              <h1 className="text-3xl font-bold bg-chrome-gradient bg-clip-text text-transparent">
-                Chrome Theme Studio Pro
-              </h1>
-              <p className="text-gray-600">Tạo theme Chrome chuyên nghiệp với đầy đủ tính năng</p>
+            
+            {/* Undo/Redo Controls */}
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowWizard(true)}
+                className="hidden md:flex"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Quick Start
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={undo}
+                disabled={!canUndo}
+                title="Hoàn tác (Ctrl+Z)"
+              >
+                <Undo className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={redo}
+                disabled={!canRedo}
+                title="Làm lại (Ctrl+Y)"
+              >
+                <Redo className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -169,7 +253,7 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Control Panel */}
           <div className="space-y-6">
             <Card className="glass-effect">
@@ -181,7 +265,7 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="basic" className="w-full">
-                  <TabsList className="grid w-full grid-cols-5">
+                  <TabsList className="grid w-full grid-cols-5 text-xs md:text-sm">
                     <TabsTrigger value="basic">Cơ Bản</TabsTrigger>
                     <TabsTrigger value="colors">Màu Sắc</TabsTrigger>
                     <TabsTrigger value="images">Hình Ảnh</TabsTrigger>
@@ -234,119 +318,126 @@ const Index = () => {
                       <p>🎨 Tùy chỉnh màu sắc cho từng thành phần của Chrome</p>
                     </div>
                     
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm">Khung & Cửa Sổ</h4>
-                      <ColorPicker
-                        label="Màu Khung Hoạt Động"
-                        color={themeData.colors.frame}
-                        onChange={(color) => updateColor('frame', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Khung Không Hoạt Động"
-                        color={themeData.colors.frame_inactive}
-                        onChange={(color) => updateColor('frame_inactive', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Khung Incognito"
-                        color={themeData.colors.frame_incognito}
-                        onChange={(color) => updateColor('frame_incognito', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Khung Incognito Không Hoạt Động"
-                        color={themeData.colors.frame_incognito_inactive}
-                        onChange={(color) => updateColor('frame_incognito_inactive', color)}
-                      />
-                    </div>
+                    <div className="space-y-4">
+                      <CollapsibleSection title="Khung & Cửa Sổ" defaultOpen={true}>
+                        <div className="space-y-3">
+                          <ColorPicker
+                            label="Màu Khung Hoạt Động"
+                            color={themeData.colors.frame}
+                            onChange={(color) => updateColor('frame', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Khung Không Hoạt Động"
+                            color={themeData.colors.frame_inactive}
+                            onChange={(color) => updateColor('frame_inactive', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Khung Incognito"
+                            color={themeData.colors.frame_incognito}
+                            onChange={(color) => updateColor('frame_incognito', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Khung Incognito Không Hoạt Động"
+                            color={themeData.colors.frame_incognito_inactive}
+                            onChange={(color) => updateColor('frame_incognito_inactive', color)}
+                          />
+                        </div>
+                      </CollapsibleSection>
 
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm">Thanh Công Cụ & Nút Bấm</h4>
-                      <ColorPicker
-                        label="Màu Thanh Công Cụ"
-                        color={themeData.colors.toolbar}
-                        onChange={(color) => updateColor('toolbar', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Nền Nút Bấm"
-                        color={themeData.colors.button_background}
-                        onChange={(color) => updateColor('button_background', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Nút Điều Khiển"
-                        color={themeData.colors.control_background}
-                        onChange={(color) => updateColor('control_background', color)}
-                      />
-                    </div>
+                      <CollapsibleSection title="Thanh Công Cụ & Nút Bấm" defaultOpen={false}>
+                        <div className="space-y-3">
+                          <ColorPicker
+                            label="Màu Thanh Công Cụ"
+                            color={themeData.colors.toolbar}
+                            onChange={(color) => updateColor('toolbar', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Nền Nút Bấm"
+                            color={themeData.colors.button_background}
+                            onChange={(color) => updateColor('button_background', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Nút Điều Khiển"
+                            color={themeData.colors.control_background}
+                            onChange={(color) => updateColor('control_background', color)}
+                          />
+                        </div>
+                      </CollapsibleSection>
 
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm">Tab</h4>
-                      <ColorPicker
-                        label="Màu Chữ Tab Hoạt Động"
-                        color={themeData.colors.tab_text}
-                        onChange={(color) => updateColor('tab_text', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Chữ Tab Nền"
-                        color={themeData.colors.tab_background_text}
-                        onChange={(color) => updateColor('tab_background_text', color)}
-                      />
-                    </div>
+                      <CollapsibleSection title="Tab" defaultOpen={false}>
+                        <div className="space-y-3">
+                          <ColorPicker
+                            label="Màu Chữ Tab Hoạt Động"
+                            color={themeData.colors.tab_text}
+                            onChange={(color) => updateColor('tab_text', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Chữ Tab Nền"
+                            color={themeData.colors.tab_background_text}
+                            onChange={(color) => updateColor('tab_background_text', color)}
+                          />
+                        </div>
+                      </CollapsibleSection>
 
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm">Trang Tab Mới (NTP)</h4>
-                      <ColorPicker
-                        label="Màu Nền NTP"
-                        color={themeData.colors.ntp_background}
-                        onChange={(color) => updateColor('ntp_background', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Chữ NTP"
-                        color={themeData.colors.ntp_text}
-                        onChange={(color) => updateColor('ntp_text', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Liên Kết NTP"
-                        color={themeData.colors.ntp_link}
-                        onChange={(color) => updateColor('ntp_link', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Gạch Chân Liên Kết NTP"
-                        color={themeData.colors.ntp_link_underline}
-                        onChange={(color) => updateColor('ntp_link_underline', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Header NTP"
-                        color={themeData.colors.ntp_header}
-                        onChange={(color) => updateColor('ntp_header', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Section NTP"
-                        color={themeData.colors.ntp_section}
-                        onChange={(color) => updateColor('ntp_section', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Liên Kết Section"
-                        color={themeData.colors.ntp_section_link}
-                        onChange={(color) => updateColor('ntp_section_link', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Gạch Chân Section"
-                        color={themeData.colors.ntp_section_link_underline}
-                        onChange={(color) => updateColor('ntp_section_link_underline', color)}
-                      />
-                      <ColorPicker
-                        label="Màu Chữ Section"
-                        color={themeData.colors.ntp_section_text}
-                        onChange={(color) => updateColor('ntp_section_text', color)}
-                      />
-                    </div>
+                      <CollapsibleSection title="Trang Tab Mới (NTP)" defaultOpen={false}>
+                        <div className="space-y-3">
+                          <ColorPicker
+                            label="Màu Nền NTP"
+                            color={themeData.colors.ntp_background}
+                            onChange={(color) => updateColor('ntp_background', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Chữ NTP"
+                            color={themeData.colors.ntp_text}
+                            onChange={(color) => updateColor('ntp_text', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Liên Kết NTP"
+                            color={themeData.colors.ntp_link}
+                            onChange={(color) => updateColor('ntp_link', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Gạch Chân Liên Kết NTP"
+                            color={themeData.colors.ntp_link_underline}
+                            onChange={(color) => updateColor('ntp_link_underline', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Header NTP"
+                            color={themeData.colors.ntp_header}
+                            onChange={(color) => updateColor('ntp_header', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Section NTP"
+                            color={themeData.colors.ntp_section}
+                            onChange={(color) => updateColor('ntp_section', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Liên Kết Section"
+                            color={themeData.colors.ntp_section_link}
+                            onChange={(color) => updateColor('ntp_section_link', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Gạch Chân Section"
+                            color={themeData.colors.ntp_section_link_underline}
+                            onChange={(color) => updateColor('ntp_section_link_underline', color)}
+                          />
+                          <ColorPicker
+                            label="Màu Chữ Section"
+                            color={themeData.colors.ntp_section_text}
+                            onChange={(color) => updateColor('ntp_section_text', color)}
+                          />
+                        </div>
+                      </CollapsibleSection>
 
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm">Bookmark</h4>
-                      <ColorPicker
-                        label="Màu Chữ Bookmark"
-                        color={themeData.colors.bookmark_text}
-                        onChange={(color) => updateColor('bookmark_text', color)}
-                      />
+                      <CollapsibleSection title="Bookmark" defaultOpen={false}>
+                        <div className="space-y-3">
+                          <ColorPicker
+                            label="Màu Chữ Bookmark"
+                            color={themeData.colors.bookmark_text}
+                            onChange={(color) => updateColor('bookmark_text', color)}
+                          />
+                        </div>
+                      </CollapsibleSection>
                     </div>
                   </TabsContent>
 
@@ -356,65 +447,80 @@ const Index = () => {
                     </div>
 
                     <div className="space-y-4">
-                      <h4 className="font-semibold text-sm">Hình Ảnh Cơ Bản</h4>
-                      <ImageUpload
-                        label="Ảnh Nền Trang Mới"
-                        description="Đề xuất: 1920x1080px hoặc lớn hơn"
-                        onImageChange={(file) => updateImage('theme_ntp_background', file)}
-                      />
-                      <ImageUpload
-                        label="Ảnh Khung Cửa Sổ"
-                        description="Chiều cao tối thiểu: 128px (lặp lại theo trục X)"
-                        onImageChange={(file) => updateImage('theme_frame', file)}
-                      />
-                      <ImageUpload
-                        label="Ảnh Thanh Công Cụ"
-                        description="Chiều cao tối thiểu: 128px (tab hiện tại + toolbar)"
-                        onImageChange={(file) => updateImage('theme_toolbar', file)}
-                      />
-                      <ImageUpload
-                        label="Ảnh Nền Tab"
-                        description="Kích thước: 16x16, 48x48 hoặc 128x128px"
-                        onImageChange={(file) => updateImage('theme_tab_background', file)}
-                      />
-                    </div>
+                      <CollapsibleSection title="Hình Ảnh Cơ Bản" defaultOpen={true}>
+                        <div className="space-y-4">
+                          <DragDropImageUpload
+                            label="Ảnh Nền Trang Mới"
+                            description="Đề xuất: 1920x1080px hoặc lớn hơn"
+                            recommendedSize={imageSizeRecommendations.theme_ntp_background}
+                            onImageChange={(file) => updateImage('theme_ntp_background', file)}
+                          />
+                          <DragDropImageUpload
+                            label="Ảnh Khung Cửa Sổ"
+                            description="Chiều cao tối thiểu: 128px (lặp lại theo trục X)"
+                            recommendedSize={imageSizeRecommendations.theme_frame}
+                            onImageChange={(file) => updateImage('theme_frame', file)}
+                          />
+                          <DragDropImageUpload
+                            label="Ảnh Thanh Công Cụ"
+                            description="Chiều cao tối thiểu: 128px (tab hiện tại + toolbar)"
+                            recommendedSize={imageSizeRecommendations.theme_toolbar}
+                            onImageChange={(file) => updateImage('theme_toolbar', file)}
+                          />
+                          <DragDropImageUpload
+                            label="Ảnh Nền Tab"
+                            description="Kích thước: 16x16, 48x48 hoặc 128x128px"
+                            recommendedSize={imageSizeRecommendations.theme_tab_background}
+                            onImageChange={(file) => updateImage('theme_tab_background', file)}
+                          />
+                        </div>
+                      </CollapsibleSection>
 
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-sm">Hình Ảnh Nâng Cao</h4>
-                      <ImageUpload
-                        label="Ảnh Nền Nút Bấm"
-                        description="Kích thước: 30x30px"
-                        onImageChange={(file) => updateImage('theme_button_background', file)}
-                      />
-                      <ImageUpload
-                        label="Ảnh Khung Không Hoạt Động"
-                        description="Khung khi cửa sổ không được focus"
-                        onImageChange={(file) => updateImage('theme_frame_inactive', file)}
-                      />
-                      <ImageUpload
-                        label="Ảnh Overlay Khung"
-                        description="Kích thước: 1100x64px (góc trên trái)"
-                        onImageChange={(file) => updateImage('theme_frame_overlay', file)}
-                      />
-                      <ImageUpload
-                        label="Ảnh Attribution"
-                        description="Logo tác giả (góc dưới phải trang mới)"
-                        onImageChange={(file) => updateImage('theme_ntp_attribution', file)}
-                      />
-                    </div>
+                      <CollapsibleSection title="Hình Ảnh Nâng Cao" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <DragDropImageUpload
+                            label="Ảnh Nền Nút Bấm"
+                            description="Kích thước: 30x30px"
+                            recommendedSize={imageSizeRecommendations.theme_button_background}
+                            onImageChange={(file) => updateImage('theme_button_background', file)}
+                          />
+                          <DragDropImageUpload
+                            label="Ảnh Khung Không Hoạt Động"
+                            description="Khung khi cửa sổ không được focus"
+                            recommendedSize={imageSizeRecommendations.theme_frame_inactive}
+                            onImageChange={(file) => updateImage('theme_frame_inactive', file)}
+                          />
+                          <DragDropImageUpload
+                            label="Ảnh Overlay Khung"
+                            description="Kích thước: 1100x64px (góc trên trái)"
+                            recommendedSize={imageSizeRecommendations.theme_frame_overlay}
+                            onImageChange={(file) => updateImage('theme_frame_overlay', file)}
+                          />
+                          <DragDropImageUpload
+                            label="Ảnh Attribution"
+                            description="Logo tác giả (góc dưới phải trang mới)"
+                            recommendedSize={imageSizeRecommendations.theme_ntp_attribution}
+                            onImageChange={(file) => updateImage('theme_ntp_attribution', file)}
+                          />
+                        </div>
+                      </CollapsibleSection>
 
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-sm">Chế Độ Incognito</h4>
-                      <ImageUpload
-                        label="Ảnh Khung Incognito"
-                        description="Khung trong chế độ incognito"
-                        onImageChange={(file) => updateImage('theme_frame_incognito', file)}
-                      />
-                      <ImageUpload
-                        label="Ảnh Tab Incognito"
-                        description="Tab không hoạt động trong incognito"
-                        onImageChange={(file) => updateImage('theme_tab_background_incognito', file)}
-                      />
+                      <CollapsibleSection title="Chế Độ Incognito" defaultOpen={false}>
+                        <div className="space-y-4">
+                          <DragDropImageUpload
+                            label="Ảnh Khung Incognito"
+                            description="Khung trong chế độ incognito"
+                            recommendedSize={imageSizeRecommendations.theme_frame_incognito}
+                            onImageChange={(file) => updateImage('theme_frame_incognito', file)}
+                          />
+                          <DragDropImageUpload
+                            label="Ảnh Tab Incognito"
+                            description="Tab không hoạt động trong incognito"
+                            recommendedSize={imageSizeRecommendations.theme_tab_background_incognito}
+                            onImageChange={(file) => updateImage('theme_tab_background_incognito', file)}
+                          />
+                        </div>
+                      </CollapsibleSection>
                     </div>
                   </TabsContent>
 
@@ -533,17 +639,7 @@ const Index = () => {
 
           {/* Live Preview */}
           <div className="space-y-6">
-            <Card className="glass-effect">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Image className="w-5 h-5" />
-                  Xem Trước Trực Tiếp
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <ChromePreview themeData={themeData} />
-              </CardContent>
-            </Card>
+            <LazyChromaPreview themeData={themeData} />
           </div>
         </div>
       </div>
