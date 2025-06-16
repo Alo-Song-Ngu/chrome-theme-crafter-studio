@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,12 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				chrome: {
+					blue: '#4285f4',
+					green: '#34a853',
+					yellow: '#fbbc05',
+					red: '#ea4335'
 				}
 			},
 			borderRadius: {
@@ -84,11 +91,24 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'chrome-glow': {
+					'0%, 100%': {
+						boxShadow: '0 0 20px rgba(66, 133, 244, 0.3)'
+					},
+					'50%': {
+						boxShadow: '0 0 30px rgba(66, 133, 244, 0.6)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'chrome-glow': 'chrome-glow 2s ease-in-out infinite'
+			},
+			backgroundImage: {
+				'chrome-gradient': 'linear-gradient(135deg, #4285f4 0%, #34a853 25%, #fbbc05 50%, #ea4335 100%)',
+				'glass': 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)'
 			}
 		}
 	},
