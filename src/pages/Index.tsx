@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +19,7 @@ export interface ThemeData {
   version: string;
   description: string;
   author?: string;
+  icon: File | null;
   colors: {
     bookmark_text: string;
     button_background: string;
@@ -78,6 +78,7 @@ const Index = () => {
     version: '1.0',
     description: 'A beautiful custom Chrome theme',
     author: '',
+    icon: null,
     colors: {
       bookmark_text: '#5f6368',
       button_background: '#f8f9fa',
@@ -148,6 +149,13 @@ const Index = () => {
     });
   }, [updateThemeData, themeData.tints]);
 
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    if (value.length <= 132) {
+      updateThemeData({ description: value });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
@@ -161,7 +169,7 @@ const Index = () => {
               <h1 className="text-3xl font-bold bg-chrome-gradient bg-clip-text text-transparent">
                 Chrome Theme Studio Pro
               </h1>
-              <p className="text-gray-600">Tạo theme Chrome chuyên nghiệp với đầy đủ tính năng</p>
+              <p className="text-gray-600">Tạo theme Chrome chuyên nghiệp với Manifest v3</p>
             </div>
           </div>
         </div>
@@ -218,14 +226,42 @@ const Index = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="description">Mô Tả</Label>
+                      <Label htmlFor="description">
+                        Mô Tả ({themeData.description.length}/132)
+                      </Label>
                       <Textarea
                         id="description"
                         value={themeData.description}
-                        onChange={(e) => updateThemeData({ description: e.target.value })}
-                        placeholder="Mô tả ngắn về theme của bạn"
+                        onChange={handleDescriptionChange}
+                        placeholder="Mô tả ngắn về theme của bạn (tối đa 132 ký tự)"
                         rows={3}
+                        className={themeData.description.length > 120 ? 'border-yellow-400' : ''}
                       />
+                      {themeData.description.length > 120 && (
+                        <p className="text-xs text-yellow-600 mt-1">
+                          Còn {132 - themeData.description.length} ký tự
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Icon Theme (bắt buộc) - 128x128px
+                      </Label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Tải lên icon 128x128px. Hệ thống sẽ tự động tạo size 48x48 và 16x16
+                      </p>
+                      <ImageUpload
+                        label=""
+                        description="PNG hoặc JPEG, chính xác 128x128 pixels"
+                        onImageChange={(file) => updateThemeData({ icon: file || null })}
+                        acceptedSize={{ width: 128, height: 128 }}
+                        required={true}
+                      />
+                      {!themeData.icon && (
+                        <p className="text-xs text-red-500 mt-1">
+                          ⚠️ Icon là bắt buộc để tạo theme
+                        </p>
+                      )}
                     </div>
                   </TabsContent>
 

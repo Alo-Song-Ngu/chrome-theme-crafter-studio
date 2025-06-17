@@ -8,30 +8,65 @@ interface ImageUploadProps {
   label: string;
   description: string;
   onImageChange: (file: File | undefined) => void;
+  acceptedSize?: { width: number; height: number };
+  required?: boolean;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   label,
   description,
   onImageChange,
+  acceptedSize,
+  required = false,
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const validateImage = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (!acceptedSize) {
+        resolve(true);
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        const isValid = img.width === acceptedSize.width && img.height === acceptedSize.height;
+        if (!isValid) {
+          setError(`Kích thước phải chính xác ${acceptedSize.width}x${acceptedSize.height}px. Ảnh hiện tại: ${img.width}x${img.height}px`);
+        } else {
+          setError(null);
+        }
+        resolve(isValid);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      onImageChange(file);
+      const isValid = await validateImage(file);
+      if (isValid) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setPreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+        onImageChange(file);
+      } else {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        onImageChange(undefined);
+      }
     }
   };
 
   const handleRemove = () => {
     setPreview(null);
+    setError(null);
     onImageChange(undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -44,8 +79,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">{label}</Label>
-      <p className="text-xs text-gray-500">{description}</p>
+      {label && (
+        <Label className="text-sm font-medium">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+      )}
+      {description && <p className="text-xs text-gray-500">{description}</p>}
       
       <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
         {preview ? (
@@ -73,6 +112,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           </div>
         )}
       </div>
+
+      {error && (
+        <p className="text-xs text-red-500 mt-1">
+          {error}
+        </p>
+      )}
 
       <input
         ref={fileInputRef}

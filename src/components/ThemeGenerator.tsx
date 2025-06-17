@@ -14,7 +14,7 @@ interface ThemeGeneratorProps {
 export const ThemeGenerator: React.FC<ThemeGeneratorProps> = ({ themeData }) => {
   const generateManifest = () => {
     const manifest = {
-      manifest_version: 2,
+      manifest_version: 3,
       name: themeData.name,
       version: themeData.version,
       description: themeData.description,
@@ -84,30 +84,33 @@ export const ThemeGenerator: React.FC<ThemeGeneratorProps> = ({ themeData }) => 
       : [0, 0, 0];
   };
 
-  const generateDefaultIcon = (size: number): Promise<Blob> => {
+  const resizeImage = (file: File, targetSize: number): Promise<Blob> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
       const ctx = canvas.getContext('2d')!;
+      const img = new Image();
       
-      // Create a simple gradient icon
-      const gradient = ctx.createLinearGradient(0, 0, size, size);
-      gradient.addColorStop(0, '#4285f4');
-      gradient.addColorStop(1, '#34a853');
+      img.onload = () => {
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        ctx.drawImage(img, 0, 0, targetSize, targetSize);
+        canvas.toBlob((blob) => resolve(blob!), 'image/png');
+      };
       
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, size, size);
-      
-      // Add a simple design
-      ctx.fillStyle = 'white';
-      ctx.fillRect(size * 0.2, size * 0.2, size * 0.6, size * 0.6);
-      
-      canvas.toBlob((blob) => resolve(blob!));
+      img.src = URL.createObjectURL(file);
     });
   };
 
   const downloadTheme = async () => {
+    if (!themeData.icon) {
+      toast({
+        title: 'Lỗi!',
+        description: 'Vui lòng tải lên icon 128x128px trước khi tạo theme.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const zip = new JSZip();
       const manifest = generateManifest();
@@ -127,10 +130,17 @@ export const ThemeGenerator: React.FC<ThemeGeneratorProps> = ({ themeData }) => 
         }
       });
 
-      // Add default icons
-      const iconPromises = [16, 48, 128].map(async (size) => {
-        if (iconsFolder) {
-          const iconBlob = await generateDefaultIcon(size);
+      // Generate and add icons from user uploaded icon
+      const iconPromises = [128, 48, 16].map(async (size) => {
+        if (iconsFolder && themeData.icon) {
+          let iconBlob: Blob;
+          if (size === 128) {
+            // Use original for 128x128
+            iconBlob = themeData.icon;
+          } else {
+            // Resize for 48x48 and 16x16
+            iconBlob = await resizeImage(themeData.icon, size);
+          }
           const iconBuffer = await iconBlob.arrayBuffer();
           iconsFolder.file(`icon${size}.png`, iconBuffer);
         }
@@ -153,7 +163,7 @@ export const ThemeGenerator: React.FC<ThemeGeneratorProps> = ({ themeData }) => 
 
       toast({
         title: 'Thành công!',
-        description: 'Theme đã được tạo và tải về thành công.',
+        description: 'Theme Manifest v3 đã được tạo và tải về thành công.',
       });
     } catch (error) {
       console.error('Error generating theme:', error);
@@ -165,24 +175,27 @@ export const ThemeGenerator: React.FC<ThemeGeneratorProps> = ({ themeData }) => 
     }
   };
 
+  const canGenerate = themeData.icon !== null;
+
   return (
     <Card className="glass-effect">
       <CardContent className="p-6">
         <div className="text-center space-y-4">
           <h3 className="text-lg font-semibold">Tải Theme Của Bạn</h3>
           <p className="text-sm text-gray-600">
-            Theme sẽ được đóng gói thành file .zip với manifest v2 sẵn sàng để cài đặt
+            Theme sẽ được đóng gói thành file .zip với Manifest v3 sẵn sàng để cài đặt
           </p>
           <Button
             onClick={downloadTheme}
-            className="w-full bg-chrome-gradient hover:opacity-90 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 animate-chrome-glow"
+            disabled={!canGenerate}
+            className={`w-full ${canGenerate ? 'bg-chrome-gradient hover:opacity-90' : 'bg-gray-400'} text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 ${canGenerate ? 'animate-chrome-glow' : ''}`}
             size="lg"
           >
             <Download className="w-5 h-5 mr-2" />
-            Tạo và Tải Theme
+            {canGenerate ? 'Tạo và Tải Theme' : 'Cần Icon 128x128px'}
           </Button>
           <div className="text-xs text-gray-500 space-y-1">
-            <p>💡 <strong>Cách cài đặt:</strong></p>
+            <p>💡 <strong>Cách cài đặt (Manifest v3):</strong></p>
             <p>1. Mở Chrome → Cài đặt → Tiện ích mở rộng</p>
             <p>2. Bật "Chế độ dành cho nhà phát triển"</p>
             <p>3. Nhấn "Tải tiện ích mở rộng đã giải nén"</p>
