@@ -12,8 +12,6 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { ThemeGenerator } from '@/components/ThemeGenerator';
 import { TintPicker } from '@/components/TintPicker';
 import { QuickStartWizard } from '@/components/QuickStartWizard';
-import { ColorPaletteGenerator } from '@/components/ColorPaletteGenerator';
-import { ImageEffects } from '@/components/ImageEffects';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -79,7 +77,6 @@ export interface ThemeData {
 
 const Index = () => {
   const [showWizard, setShowWizard] = useState(false);
-  const [selectedImageForEffects, setSelectedImageForEffects] = useState<File | null>(null);
 
   const initialThemeData: ThemeData = {
     name: 'My Chrome Theme',
@@ -182,12 +179,25 @@ const Index = () => {
     });
   };
 
-  const handleApplyPalette = (colors: Record<string, string>) => {
-    updateThemeDataWithHistory({ colors: colors as any });
-    toast({
-      title: 'Bảng màu áp dụng thành công!',
-      description: 'Màu sắc hài hòa đã được áp dụng cho theme.',
-    });
+  // Validation for required fields
+  const isValid = () => {
+    return (
+      themeData.name.trim().length > 0 &&
+      themeData.version.trim().length > 0 &&
+      themeData.description.trim().length >= 22 &&
+      themeData.icon !== null &&
+      themeData.images.theme_ntp_background !== undefined
+    );
+  };
+
+  const getValidationErrors = () => {
+    const errors = [];
+    if (!themeData.name.trim()) errors.push('Tên Theme là bắt buộc');
+    if (!themeData.version.trim()) errors.push('Phiên Bản là bắt buộc');
+    if (themeData.description.trim().length < 22) errors.push('Mô Tả phải có ít nhất 22 ký tự');
+    if (!themeData.icon) errors.push('Icon Theme là bắt buộc');
+    if (!themeData.images.theme_ntp_background) errors.push('Ảnh Nền Trang Mới là bắt buộc');
+    return errors;
   };
 
   return (
@@ -247,34 +257,24 @@ const Index = () => {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-8">
           {/* Control Panel */}
           <div className="space-y-4 md:space-y-6">
-            {/* Quick Tools */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CollapsibleSection 
-                title="Color Palette Generator" 
-                icon={<Palette className="w-4 h-4" />}
-                defaultExpanded={false}
-              >
-                <ColorPaletteGenerator onApplyPalette={handleApplyPalette} />
-              </CollapsibleSection>
-              
-              <CollapsibleSection 
-                title="Image Effects" 
-                icon={<Image className="w-4 h-4" />}
-                defaultExpanded={false}
-              >
-                <ImageEffects 
-                  originalFile={selectedImageForEffects}
-                  onProcessedFile={(file) => {
-                    // Apply processed file to current image upload
-                    console.log('Processed file:', file);
-                    toast({
-                      title: 'Image effects applied!',
-                      description: 'Hiệu ứng ảnh đã được áp dụng.',
-                    });
-                  }}
-                />
-              </CollapsibleSection>
-            </div>
+            {/* Validation Status */}
+            {!isValid() && (
+              <Card className="border-yellow-400 bg-yellow-50">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-2">
+                    <Lightbulb className="w-5 h-5 text-yellow-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-yellow-800">Trường Bắt Buộc Còn Thiếu:</h4>
+                      <ul className="text-sm text-yellow-700 mt-1 space-y-1">
+                        {getValidationErrors().map((error, index) => (
+                          <li key={index}>• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <CollapsibleSection 
               title="Bảng Điều Khiển" 
@@ -283,31 +283,32 @@ const Index = () => {
               className="glass-effect"
             >
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1">
+                <TabsList className="grid w-full grid-cols-4 gap-1">
                   <TabsTrigger value="basic" className="text-xs md:text-sm">Cơ Bản</TabsTrigger>
                   <TabsTrigger value="colors" className="text-xs md:text-sm">Màu Sắc</TabsTrigger>
                   <TabsTrigger value="images" className="text-xs md:text-sm">Hình Ảnh</TabsTrigger>
                   <TabsTrigger value="tints" className="text-xs md:text-sm">Tint</TabsTrigger>
-                  <TabsTrigger value="properties" className="text-xs md:text-sm">Thuộc Tính</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Tên Theme</Label>
+                    <Label htmlFor="name">Tên Theme <span className="text-red-500">*</span></Label>
                     <Input
                       id="name"
                       value={themeData.name}
                       onChange={(e) => updateThemeDataWithHistory({ name: e.target.value })}
                       placeholder="Nhập tên theme của bạn"
+                      className={!themeData.name.trim() ? 'border-red-300' : ''}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="version">Phiên Bản</Label>
+                    <Label htmlFor="version">Phiên Bản <span className="text-red-500">*</span></Label>
                     <Input
                       id="version"
                       value={themeData.version}
                       onChange={(e) => updateThemeDataWithHistory({ version: e.target.value })}
                       placeholder="1.0"
+                      className={!themeData.version.trim() ? 'border-red-300' : ''}
                     />
                   </div>
                   <div>
@@ -321,45 +322,37 @@ const Index = () => {
                   </div>
                   <div>
                     <Label htmlFor="description">
-                      Mô Tả ({themeData.description.length}/132)
+                      Mô Tả <span className="text-red-500">*</span> ({themeData.description.length}/132)
                     </Label>
                     <Textarea
                       id="description"
                       value={themeData.description}
                       onChange={handleDescriptionChange}
-                      placeholder="Mô tả ngắn về theme của bạn (tối đa 132 ký tự)"
+                      placeholder="Mô tả ngắn về theme của bạn (tối thiểu 22 ký tự, tối đa 132 ký tự)"
                       rows={3}
-                      className={themeData.description.length > 120 ? 'border-yellow-400' : ''}
+                      className={
+                        themeData.description.length < 22 || themeData.description.length > 120 
+                          ? 'border-red-300' 
+                          : themeData.description.length > 110 
+                            ? 'border-yellow-400' 
+                            : ''
+                      }
                     />
-                    {themeData.description.length > 120 && (
-                      <p className="text-xs text-yellow-600 mt-1">
-                        Còn {132 - themeData.description.length} ký tự
+                    {themeData.description.length < 22 && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Cần thêm {22 - themeData.description.length} ký tự nữa
                       </p>
                     )}
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">
-                      Icon Theme (bắt buộc) - 128x128px
-                    </Label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Tải lên icon 128x128px. Hệ thống sẽ tự động tạo size 48x48 và 16x16
-                    </p>
-                    <ImageUpload
-                      label=""
-                      description="PNG hoặc JPEG, chính xác 128x128 pixels"
-                      onImageChange={(file) => updateThemeDataWithHistory({ icon: file || null })}
-                      acceptedSize={{ width: 128, height: 128 }}
-                      required={true}
-                    />
-                    {!themeData.icon && (
-                      <p className="text-xs text-red-500 mt-1">
-                        ⚠️ Icon là bắt buộc để tạo theme
+                    {themeData.description.length > 110 && themeData.description.length <= 132 && (
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Còn {132 - themeData.description.length} ký tự
                       </p>
                     )}
                   </div>
                 </TabsContent>
 
                 <TabsContent value="colors" className="space-y-4 max-h-80 md:max-h-96 overflow-y-auto">
+                  
                   <div className="text-sm text-gray-600 mb-4">
                     <p>🎨 Tùy chỉnh màu sắc cho từng thành phần của Chrome</p>
                   </div>
@@ -486,12 +479,51 @@ const Index = () => {
                   </div>
 
                   <div className="space-y-4">
+                    <h4 className="font-semibold text-sm">Hình Ảnh Bắt Buộc</h4>
+                    
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Icon Theme (bắt buộc) <span className="text-red-500">*</span> - 128x128px
+                      </Label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Tải lên icon 128x128px. Hệ thống sẽ tự động tạo size 48x48 và 16x16
+                      </p>
+                      <ImageUpload
+                        label=""
+                        description="PNG hoặc JPEG, chính xác 128x128 pixels"
+                        onImageChange={(file) => updateThemeDataWithHistory({ icon: file || null })}
+                        acceptedSize={{ width: 128, height: 128 }}
+                        required={true}
+                      />
+                      {!themeData.icon && (
+                        <p className="text-xs text-red-500 mt-1">
+                          ⚠️ Icon là bắt buộc để tạo theme
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Ảnh Nền Trang Mới <span className="text-red-500">*</span>
+                      </Label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Đề xuất: 1920x1080px hoặc lớn hơn
+                      </p>
+                      <ImageUpload
+                        label=""
+                        description="Ảnh nền cho trang tab mới"
+                        onImageChange={(file) => updateImage('theme_ntp_background', file)}
+                      />
+                      {!themeData.images.theme_ntp_background && (
+                        <p className="text-xs text-red-500 mt-1">
+                          ⚠️ Ảnh nền trang mới là bắt buộc
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
                     <h4 className="font-semibold text-sm">Hình Ảnh Cơ Bản</h4>
-                    <ImageUpload
-                      label="Ảnh Nền Trang Mới"
-                      description="Đề xuất: 1920x1080px hoặc lớn hơn"
-                      onImageChange={(file) => updateImage('theme_ntp_background', file)}
-                    />
                     <ImageUpload
                       label="Ảnh Khung Cửa Sổ"
                       description="Chiều cao tối thiểu: 128px (lặp lại theo trục X)"
@@ -549,6 +581,7 @@ const Index = () => {
                 </TabsContent>
 
                 <TabsContent value="tints" className="space-y-4">
+                  
                   <div className="text-sm text-gray-600 mb-4">
                     <p>🌈 Áp dụng hiệu ứng màu cho các thành phần</p>
                     <p className="text-xs">Giá trị -1 có nghĩa là không thay đổi</p>
@@ -580,77 +613,6 @@ const Index = () => {
                       values={themeData.tints.background_tab}
                       onChange={(values) => updateTint('background_tab', values)}
                     />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="properties" className="space-y-4">
-                  <div className="text-sm text-gray-600 mb-4">
-                    <p>⚙️ Cài đặt thuộc tính hiển thị</p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Căn Chỉnh Ảnh Nền NTP</Label>
-                      <Select
-                        value={themeData.properties.ntp_background_alignment}
-                        onValueChange={(value) => updateThemeDataWithHistory({ 
-                          properties: { ...themeData.properties, ntp_background_alignment: value } 
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="center">Giữa</SelectItem>
-                          <SelectItem value="top">Trên</SelectItem>
-                          <SelectItem value="bottom">Dưới</SelectItem>
-                          <SelectItem value="left">Trái</SelectItem>
-                          <SelectItem value="right">Phải</SelectItem>
-                          <SelectItem value="top left">Trên Trái</SelectItem>
-                          <SelectItem value="top right">Trên Phải</SelectItem>
-                          <SelectItem value="bottom left">Dưới Trái</SelectItem>
-                          <SelectItem value="bottom right">Dưới Phải</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Lặp Lại Ảnh Nền NTP</Label>
-                      <Select
-                        value={themeData.properties.ntp_background_repeat}
-                        onValueChange={(value) => updateThemeDataWithHistory({ 
-                          properties: { ...themeData.properties, ntp_background_repeat: value } 
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no-repeat">Không Lặp</SelectItem>
-                          <SelectItem value="repeat">Lặp Toàn Bộ</SelectItem>
-                          <SelectItem value="repeat-x">Lặp Theo X</SelectItem>
-                          <SelectItem value="repeat-y">Lặp Theo Y</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Logo Chrome</Label>
-                      <Select
-                        value={themeData.properties.ntp_logo_alternate.toString()}
-                        onValueChange={(value) => updateThemeDataWithHistory({ 
-                          properties: { ...themeData.properties, ntp_logo_alternate: parseInt(value) } 
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Logo Màu</SelectItem>
-                          <SelectItem value="1">Logo Trắng</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
