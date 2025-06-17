@@ -2,7 +2,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Upload, X, Image } from 'lucide-react';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 interface DragDropImageUploadProps {
   label: string;
@@ -151,7 +151,7 @@ export const DragDropImageUpload: React.FC<DragDropImageUploadProps> = ({
           <div className="text-center py-8">
             {isDragging ? (
               <>
-                <Image className="w-8 h-8 mx-auto text-blue-500 mb-2" />
+                <ImageIcon className="w-8 h-8 mx-auto text-blue-500 mb-2" />
                 <p className="text-blue-600 font-medium">Thả file ở đây</p>
               </>
             ) : (
