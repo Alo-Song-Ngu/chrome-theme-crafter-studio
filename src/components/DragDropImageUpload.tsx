@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Image } from 'lucide-react';
 
-interface ImageUploadProps {
+interface DragDropImageUploadProps {
   label: string;
   description: string;
   onImageChange: (file: File | undefined) => void;
@@ -12,7 +12,7 @@ interface ImageUploadProps {
   required?: boolean;
 }
 
-export const ImageUpload: React.FC<ImageUploadProps> = ({
+export const DragDropImageUpload: React.FC<DragDropImageUploadProps> = ({
   label,
   description,
   onImageChange,
@@ -60,9 +60,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       reader.readAsDataURL(file);
       onImageChange(file);
     } else {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
       onImageChange(undefined);
     }
   }, [acceptedSize, onImageChange]);
@@ -121,7 +118,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       {description && <p className="text-xs text-gray-500">{description}</p>}
       
       <div 
-        className={`border-2 border-dashed rounded-lg p-4 transition-all cursor-pointer touch-manipulation ${
+        className={`border-2 border-dashed rounded-lg p-4 transition-all cursor-pointer ${
           isDragging 
             ? 'border-blue-500 bg-blue-50' 
             : 'border-gray-200 hover:border-gray-300'
@@ -141,7 +138,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <Button
               variant="destructive"
               size="sm"
-              className="absolute top-2 right-2 touch-manipulation"
+              className="absolute top-2 right-2"
               onClick={(e) => {
                 e.stopPropagation();
                 handleRemove();
@@ -151,17 +148,17 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             </Button>
           </div>
         ) : (
-          <div className="text-center py-4">
+          <div className="text-center py-8">
             {isDragging ? (
               <>
                 <Image className="w-8 h-8 mx-auto text-blue-500 mb-2" />
-                <p className="text-blue-600 font-medium text-sm">Thả file ở đây</p>
+                <p className="text-blue-600 font-medium">Thả file ở đây</p>
               </>
             ) : (
               <>
                 <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-gray-600 mb-2 text-sm">Kéo thả hoặc click để chọn ảnh</p>
-                <Button variant="outline" size="sm">
+                <p className="text-gray-600 mb-2">Kéo thả hoặc click để chọn ảnh</p>
+                <Button variant="outline">
                   Chọn Hình Ảnh
                 </Button>
               </>
